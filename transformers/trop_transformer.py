@@ -18,8 +18,9 @@ latent_dim = 256  # Latent dimensionality of the encoding space.
 
 # Model savepoints
 model_name = "hebrew"
-style = "length"
-version = f"3-{style}-same_model"
+input_data = "grammar"
+style = "reverse"
+version = f"5-{style}-{input_data}"
 # version = "0-test"
 ckpt_path = os.path.join("ckpt", model_name, version + ".h5")
 log_path = os.path.join("log", model_name, version)
@@ -38,8 +39,13 @@ lines = list(parsers.groupby_looper2(bhsac_df))
 # Data is shuffled for training.
 lines.sort(key=lambda x: len(x[0]), reverse=True)
 
+if input_data == "pasuk":
+    use_pasuk = True
+else:
+    use_pasuk = False
+
 # Turn the lines (one pasuk each) into character and text sets for the trop LSTM
-input_characters, target_characters, input_texts, target_texts = parsers.compile_sets(lines=lines)
+input_characters, target_characters, input_texts, target_texts = parsers.compile_sets(lines=lines, use_pasuk=use_pasuk)
 
 # For case of length-only binary model- Use simpler input texts for training.
 original_input_texts = input_texts
@@ -75,7 +81,7 @@ ds_test = ds_test_with_idx.map(lambda x, y, z: (x, y))
 transformer = models.Transformer(num_layers=1, d_model=latent_dim, num_heads=1, dff=latent_dim, input_vocab_size=len(input_token_index)+1, target_vocab_size=len(target_token_index)+1)
 learning_rate = models.CustomSchedule(d_model=latent_dim)
 optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy])
+transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy, utils.BigramAccuracy])
 
 early_stopper = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=30, min_delta=0.005)
 model_checkpoint = tf.keras.callbacks.ModelCheckpoint(ckpt_path, monitor='val_loss', save_best_only=True)

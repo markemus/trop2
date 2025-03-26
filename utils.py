@@ -11,6 +11,50 @@ trop_names["START"] = "START"
 trop_names["END"] = "END"
 
 
+class BigramAccuracy(tf.keras.metrics.Metric):
+    def __init__(self, name="bigram_accuracy", **kwargs):
+        super(BigramAccuracy, self).__init__(name=name, **kwargs)
+        self.correct_bigrams = self.add_weight(name="correct_bigrams", initializer="zeros", dtype=tf.float32)
+        self.total_bigrams = self.add_weight(name="total_bigrams", initializer="zeros", dtype=tf.float32)
+
+    def _get_bigrams(self, sequence):
+        """Generate bigrams from a tensor of token IDs."""
+        bigrams = tf.strings.join([sequence[:, :-1], sequence[:, 1:]], separator="|")
+        return bigrams
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        """
+        y_true and y_pred are token sequences in integer format.
+        """
+        # Ensure the sequences have the same length
+        max_len = tf.minimum(tf.shape(y_true)[1], tf.shape(y_pred)[1])
+        y_true, y_pred = y_true[:, :max_len], y_pred[:, :max_len]
+
+        # Extract bigrams
+        true_bigrams = self._get_bigrams(tf.strings.as_string(y_true))
+        pred_bigrams = self._get_bigrams(tf.strings.as_string(y_pred))
+
+        # Calculate matching bigrams
+        matches = tf.reduce_sum(
+            tf.cast(tf.reduce_any(tf.equal(true_bigrams[:, :, tf.newaxis], pred_bigrams[:, tf.newaxis, :]), axis=-1),
+                    tf.float32)
+        )
+
+        # Count total bigrams
+        total = tf.reduce_sum(tf.cast(tf.shape(true_bigrams)[1], tf.float32))
+
+        # Update state
+        self.correct_bigrams.assign_add(matches)
+        self.total_bigrams.assign_add(total)
+
+    def result(self):
+        return tf.math.divide_no_nan(self.correct_bigrams, self.total_bigrams)
+
+    def reset_state(self):
+        self.correct_bigrams.assign(0.0)
+        self.total_bigrams.assign(0.0)
+
+
 def plot_attention_head(in_tokens, translated_tokens, attention):
     # The model didn't generate `<START>` in the output. Skip it.
     translated_tokens = translated_tokens[1:]

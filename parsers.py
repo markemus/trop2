@@ -89,7 +89,7 @@ def groupby_looper2(bhsac_df):
         yield sent_word, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id
 
 
-def compile_sets(lines, num_samples=None):
+def compile_sets(lines, num_samples=None, use_pasuk=False):
     """Input comes from list(groupby_looper2(bhsac_df)). Turns the lines into character and text sets for the trop LSTM.
     The grammar will be in a prefix graph notation (a sentence with phrase label prepended to each phrase/clause).
 
@@ -105,6 +105,9 @@ def compile_sets(lines, num_samples=None):
 
     for line in lines[:num_samples]:
         pasuk, input_text, target_text, _, _, _, _ = line
+        if use_pasuk:
+            # Strip punctuation and trop and use pasuk as input for model
+            input_text = ["".join(char for char in x if char.isalnum()) for x in pasuk]
         input_text = input_text.copy()
         target_text = target_text.copy()
 
