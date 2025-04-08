@@ -18,9 +18,9 @@ latent_dim = 256  # Latent dimensionality of the encoding space.
 
 # Model savepoints
 model_name = "hebrew"
-input_data = "grammar"
+input_data = "length"
 style = "reverse"
-version = f"5-{style}-{input_data}"
+version = f"6-{style}-{input_data}"
 # version = "0-test"
 ckpt_path = os.path.join("ckpt", model_name, version + ".h5")
 log_path = os.path.join("log", model_name, version)
@@ -49,10 +49,11 @@ input_characters, target_characters, input_texts, target_texts = parsers.compile
 
 # For case of length-only binary model- Use simpler input texts for training.
 original_input_texts = input_texts
-if style == "length":
+if input_data == "length":
     # We only pass sentence length into the model
     input_characters, input_texts = parsers.grammar_to_length(original_input_texts)
-elif style == "reverse":
+
+if style == "reverse":
     # We reverse the order of the trop (to test whether forcing starts from end of pasuk- should give better accuracy if so, right?)
     target_texts = [list(reversed(x)) for x in target_texts]
 
@@ -81,7 +82,8 @@ ds_test = ds_test_with_idx.map(lambda x, y, z: (x, y))
 transformer = models.Transformer(num_layers=1, d_model=latent_dim, num_heads=1, dff=latent_dim, input_vocab_size=len(input_token_index)+1, target_vocab_size=len(target_token_index)+1)
 learning_rate = models.CustomSchedule(d_model=latent_dim)
 optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, epsilon=1e-9)
-transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy, utils.BigramAccuracy])
+transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy, utils.bigram_accuracy])
+# transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy])
 
 early_stopper = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=30, min_delta=0.005)
 model_checkpoint = tf.keras.callbacks.ModelCheckpoint(ckpt_path, monitor='val_loss', save_best_only=True)
@@ -95,6 +97,7 @@ history = transformer.fit(ds_train, validation_data=ds_test, epochs=80, callback
 grammar_tokenizer = models.Tokenizer(dict=input_token_index)
 trop_tokenizer = models.Tokenizer(dict=target_token_index)
 accuracies = []
+bigram_accuracies = []
 
 with open(os.path.join("log", f"{model_name}_{version}_validation_generated.txt"), "w", encoding='utf-8') as valid_file:
     for ((g_tokens, t_tokens), _, seq_index) in list(ds_test_with_idx.unbatch()):
@@ -119,7 +122,11 @@ with open(os.path.join("log", f"{model_name}_{version}_validation_generated.txt"
 
         predicted_trop = trop_tokenizer.detokenize(output)
         accuracy = np.mean([x == y for (x, y) in zip(output, t_tokens)])
+        bigram_accuracy = utils.bigram_accuracy(y_true=t_tokens.numpy().reshape(1, -1), y_pred=np.array(output).reshape(1, -1)).numpy()
+        # Save metrics
         accuracies.append(accuracy)
+        bigram_accuracies.append(bigram_accuracy)
+
         print("-", file=valid_file)
         # print("Input verse:  ", lines[seq_index][0], file=valid_file)
         print("Input verse:  ", lines[seq_index.numpy()[0]][0], file=valid_file)
@@ -127,7 +134,9 @@ with open(os.path.join("log", f"{model_name}_{version}_validation_generated.txt"
         print("Actual trop:  ", [utils.trop_names[x] for x in trop_tokenizer.detokenize(t_tokens.numpy())], file=valid_file)
         print("Decoded trop: ", [utils.trop_names[x] for x in trop_tokenizer.detokenize(output)], file=valid_file)
         print("Accuracy:     ", accuracy, file=valid_file)
+        print("Bigram Acc:   ", bigram_accuracy, file=valid_file)
     print(f"Overall accuracy (test): {np.mean(accuracies)}", file=valid_file)
+    print(f"Overall bigram accuracy (test): {np.mean(bigram_accuracies)}", file=valid_file)
 transformer.save_weights(ckpt_path)
 # transformer.load_weights(ckpt_path)
 
