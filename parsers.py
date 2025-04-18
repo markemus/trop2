@@ -22,12 +22,14 @@ def groupby_looper2(bhsac_df):
         verse = g[1]
 
         sent_word = []
+        sent_word_parts = []
         sent_gram = []
         sent_trope = []
 
         sent_word_nodes = []
         sent_gram_nodes = []
         sent_trope_nodes = []
+        word = ""
 
         for i, row in verse.iterrows():
             # Grammar
@@ -49,11 +51,24 @@ def groupby_looper2(bhsac_df):
             # Words and trope
             if row.g_word_utf8 is not np.nan:
                 # word
-                word = row.g_word_utf8
-                # print(word)
-                # qere-ketiv- have to check for nan and 'x is np.nan' doesn't work on this column so we do this nonsense.
+                # qere-ketiv- have to check it's not nan or empty
                 if isinstance(row.qere_utf8, str) and len(row.qere_utf8) > 0:
-                    word = row.qere_utf8
+                    # We save both full words and word components so we can later match the grammar to the words if we need to.
+                    word += row.qere_utf8
+                    word_part = row.qere_utf8
+                else:
+                    word += row.g_word_utf8
+                    word_part = row.g_word_utf8
+                # print(word)
+                sent_word_parts.append(word_part)
+
+            # Maqaf connects words into single trop element, so we consider these a single word.
+            if row.trailer_utf8 and row.trailer_utf8 == "־":
+                word += "־"
+
+            # Any other trailer ends the word (including a space).
+            elif row.trailer_utf8 and row.trailer_utf8 is not np.nan:
+                # print(row.trailer)
                 sent_word.append(word)
                 sent_word_nodes.append(row.n)
 
@@ -80,13 +95,15 @@ def groupby_looper2(bhsac_df):
                 except BaseException as e:
                     print(e)
 
+                word = ""
+
         # Get that sof pasuk
         # sent_word.append(verse.g_word_utf8.iloc[-1])
         # sent_word_nodes.append(verse.n.iloc[-1])
         sent_trope.append(chr(1475))
         sent_trope_nodes.append(verse.n.iloc[-1])
 
-        yield sent_word, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id
+        yield sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id
 
 
 def compile_sets(lines, num_samples=None, use_pasuk=False):
@@ -231,9 +248,10 @@ if __name__ == "__main__":
     looper = groupby_looper2(bhsac_df=bhsac_df)
 
     # TODO save results
-    with open("data/grammar_v_trop-v2.2.txt", "wb") as grammar_v_trop:
-        for sent_word, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id in looper:
-            grammar_v_trop.write("\t".join([str(sent_word), str(sent_gram), str(sent_trope), str(sent_word_nodes), str(sent_gram_nodes), str(sent_trope_nodes), str(verse_id.values.tolist()[0])]).encode("utf-8"))
+    with open("data/grammar_v_trop-v2.5.txt", "wb") as grammar_v_trop:
+        for sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id in looper:
+            print(sent_word, sent_word_parts, sent_gram, sent_trope)
+            grammar_v_trop.write("\t".join([str(sent_word), str(sent_word_parts), str(sent_gram), str(sent_trope), str(sent_word_nodes), str(sent_gram_nodes), str(sent_trope_nodes), str(verse_id.values.tolist()[0])]).encode("utf-8"))
             grammar_v_trop.write("\n".encode("utf-8"))
 
     print("Done!")

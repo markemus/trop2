@@ -6,6 +6,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 
+import parsers
 import utils
 
 from scipy.spatial.distance import cosine
@@ -13,11 +14,11 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.metrics import mean_absolute_error, accuracy_score, balanced_accuracy_score
 from sklearn.preprocessing import OneHotEncoder
 
-from split_trope import torah_df
+# from split_trope import torah_df
 
 # VARS
 timestamp = str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
-outfolder = os.path.join("out", timestamp)
+outfolder = os.path.join("dec_tree", timestamp)
 os.makedirs(outfolder, exist_ok=False)
 
 # Data
@@ -25,13 +26,20 @@ os.makedirs(outfolder, exist_ok=False)
 all_trope = sorted(np.array(utils.trops + ["BEGIN", "END"]))
 trop_names = ["BEGIN", "END"] + [utils.trop_names[x] for x in utils.trops]
 
+path = "data/bhsac.tsv"
+bhsac_df = pd.read_csv(path, sep="\t")
+# Drop EMES sefarim
+bhsac_df.drop(bhsac_df.loc[1041609:1219666].index, inplace=True)
+# TODO sent_trope for bhsac
+# sent_trope = list(parsers.groupby_looper2(bhsac_df))[2]
+
 # Match each trope to the preceding trope.
 print("Creating current-next labeled trope pairs...")
 trop_pairs = []
-for vrs in torah_df.word_trope:
+for vrs in sent_trope:
     trop0 = "BEGIN"
     for wrd in vrs:
-        trop = wrd[1]
+        trop = wrd
         trop_pairs.append([trop0, trop])
         trop0 = trop
     trop_pairs.append([trop, "END"])
@@ -90,5 +98,6 @@ print("accuracy:", acc)
 trop_data_df = pd.DataFrame(data=first_ohe, columns=trop_names)
 # trop_lbl_df = pd.DataFrame(data=second_ohe, columns=trop_names)
 trop_pred_df = pd.DataFrame(data=probs, columns=trop_names)
-
+# TODO try reverse order
+# TODO save results
 print("done")
