@@ -12,7 +12,7 @@ import utils
 # VARS
 batch_size = 64  # Batch size for training.
 # epochs = 100  # Number of epochs to train for.
-latent_dim = 512  # Latent dimensionality of the encoding space.
+latent_dim = 256  # Latent dimensionality of the encoding space.
 # num_samples = 10000  # Number of samples to train on.
 # patience = 30
 
@@ -20,7 +20,7 @@ latent_dim = 512  # Latent dimensionality of the encoding space.
 model_name = "hebrew"
 input_data = "length"
 style = "reverse"
-version = f"7-{style}-{input_data}-512_latent"
+version = f"9-{style}-{input_data}-256_patience-150"
 # version = "0-test"
 ckpt_path = os.path.join("ckpt", model_name, version + ".h5")
 log_path = os.path.join("log", model_name, version)
@@ -85,12 +85,12 @@ optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, eps
 transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy, utils.bigram_accuracy])
 # transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy])
 
-early_stopper = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=30, min_delta=0.005)
+early_stopper = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=150, min_delta=0.005)
 model_checkpoint = tf.keras.callbacks.ModelCheckpoint(ckpt_path, monitor='val_loss', save_best_only=True)
 tboard = tf.keras.callbacks.TensorBoard(log_dir=log_path)
 
 # TRAIN
-history = transformer.fit(ds_train, validation_data=ds_test, epochs=80, callbacks=[early_stopper, tboard])
+history = transformer.fit(ds_train, validation_data=ds_test, epochs=200, callbacks=[early_stopper, tboard])
 
 # TODO word node per trop and per grammar token.
 # models.tokenizer = Tokenizer
