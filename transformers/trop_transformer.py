@@ -12,7 +12,7 @@ import utils
 # VARS
 batch_size = 64  # Batch size for training.
 # epochs = 100  # Number of epochs to train for.
-latent_dim = 256  # Latent dimensionality of the encoding space.
+latent_dim = 512  # Latent dimensionality of the encoding space.
 # num_samples = 10000  # Number of samples to train on.
 # patience = 30
 
@@ -20,7 +20,7 @@ latent_dim = 256  # Latent dimensionality of the encoding space.
 model_name = "hebrew"
 input_data = "length"
 style = "reverse"
-version = f"6-{style}-{input_data}"
+version = f"7-{style}-{input_data}-512_latent"
 # version = "0-test"
 ckpt_path = os.path.join("ckpt", model_name, version + ".h5")
 log_path = os.path.join("log", model_name, version)

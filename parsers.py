@@ -121,7 +121,7 @@ def compile_sets(lines, num_samples=None, use_pasuk=False):
         num_samples = len(lines)
 
     for line in lines[:num_samples]:
-        pasuk, input_text, target_text, _, _, _, _ = line
+        pasuk, pasuk_parts, input_text, target_text, _, _, _, _ = line
         if use_pasuk:
             # Strip punctuation and trop and use pasuk as input for model
             input_text = ["".join(char for char in x if char.isalnum()) for x in pasuk]
