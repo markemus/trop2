@@ -61,6 +61,9 @@ def groupby_looper2(bhsac_df):
                     word_part = row.g_word_utf8
                 # print(word)
                 sent_word_parts.append(word_part)
+            elif row.otype == "word":
+                # Has a grammar piece but not a word piece eg ב ארץ = on the earth- three syntactical pieces on two words.
+                sent_word_parts.append("")
 
             # Maqaf connects words into single trop element, so we consider these a single word.
             if row.trailer_utf8 and row.trailer_utf8 == "־":
@@ -248,11 +251,11 @@ if __name__ == "__main__":
     looper = groupby_looper2(bhsac_df=bhsac_df)
 
     # TODO save results
-    with open("data/grammar_v_trop-v2.5.txt", "wb") as grammar_v_trop:
+    with open("data/grammar_v_trop-v2.7.txt", "w", encoding="utf-8") as grammar_v_trop:
         for sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id in looper:
             print(sent_word, sent_word_parts, sent_gram, sent_trope)
-            grammar_v_trop.write("\t".join([str(sent_word), str(sent_word_parts), str(sent_gram), str(sent_trope), str(sent_word_nodes), str(sent_gram_nodes), str(sent_trope_nodes), str(verse_id.values.tolist()[0])]).encode("utf-8"))
-            grammar_v_trop.write("\n".encode("utf-8"))
+            grammar_v_trop.write("\t".join([str(sent_word), str(sent_word_parts), str(sent_gram), str(sent_trope), str(sent_word_nodes), str(sent_gram_nodes), str(sent_trope_nodes), str(verse_id.values.tolist()[0])]))
+            grammar_v_trop.write("\n")
 
     print("Done!")
 # ((1,2), ((3,4),5)) -> [1,3,4,2,5]
