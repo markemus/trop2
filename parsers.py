@@ -167,6 +167,31 @@ def grammar_to_length(original_input_texts):
     return input_characters, input_texts
 
 
+def reverse_trop_to_levels(trop_sequences):
+    """Builds an output set of trop levels from an original set of trop.
+    WARNING: Trop must be in reverse order (sof pasuk first)."""
+    path = "../data/Unicode_chars.tsv"
+    lut_df = pd.read_csv(path, sep="\t")
+    lut_df = lut_df[lut_df["lvl"].notna()]
+
+    target_characters = ["1", "2", "3", "4", ","]
+    lvl_sequences = []
+    for seq in trop_sequences:
+        lvl = 1
+        lvl_seq = []
+
+        # lvl is set by dividing trops. Connecting trops retain the same level. EG 1,1,1,2,2,3,3,1 (etnahtah),1,1.
+        for trop in seq:
+            if sum(lut_df["char"] == trop):
+                lvl_seq.append(",")
+                lvl = str(int(lut_df[lut_df["char"] == trop].iloc[0]["lvl"]))
+            lvl_seq.append(lvl)
+
+        lvl_sequences.append(lvl_seq)
+
+    return lvl_sequences, target_characters
+
+
 def build_lstm_data(input_characters, target_characters, input_texts, target_texts):
     """Converts sets from compile_sets() into categorical data tables ready for the LSTM."""
     input_characters = sorted(list(input_characters))
@@ -250,7 +275,7 @@ if __name__ == "__main__":
     bhsac_df = pd.read_csv(path, sep="\t")
     looper = groupby_looper2(bhsac_df=bhsac_df)
 
-    # TODO save results
+    # TODO-DONE save results
     with open("data/grammar_v_trop-v2.7.txt", "w", encoding="utf-8") as grammar_v_trop:
         for sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id in looper:
             print(sent_word, sent_word_parts, sent_gram, sent_trope)

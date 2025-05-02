@@ -19,8 +19,9 @@ latent_dim = 256  # Latent dimensionality of the encoding space.
 # Model savepoints
 model_name = "hebrew"
 input_data = "length"
+output_data = "level"
 style = "reverse"
-version = f"9-{style}-{input_data}-256_patience-150"
+version = f"11-{style}-{input_data}-{output_data}"
 # version = "0-test"
 ckpt_path = os.path.join("ckpt", model_name, version + ".h5")
 log_path = os.path.join("log", model_name, version)
@@ -57,6 +58,12 @@ if style == "reverse":
     # We reverse the order of the trop (to test whether forcing starts from end of pasuk- should give better accuracy if so, right?)
     target_texts = [list(reversed(x)) for x in target_texts]
 
+if output_data == "level":
+    if style == "reverse":
+        target_texts, target_characters = parsers.reverse_trop_to_levels(target_texts)
+    else:
+        raise ValueError("To predict level trop must be in reverse order.")
+
 # Aggregate data into arrays
 num_encoder_tokens = len(input_characters)
 num_decoder_tokens = len(target_characters)
@@ -85,7 +92,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate, beta_1=0.9, beta_2=0.98, eps
 transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy, utils.bigram_accuracy])
 # transformer.compile(loss=models.masked_loss, optimizer=optimizer, metrics=[models.masked_accuracy])
 
-early_stopper = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=150, min_delta=0.005)
+early_stopper = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=30, min_delta=0.005)
 model_checkpoint = tf.keras.callbacks.ModelCheckpoint(ckpt_path, monitor='val_loss', save_best_only=True)
 tboard = tf.keras.callbacks.TensorBoard(log_dir=log_path)
 
@@ -108,7 +115,7 @@ with open(os.path.join("log", f"{model_name}_{version}_validation_generated.txt"
         output = [trop_tokenizer.tokenize(["START"])[0]]
 
         start, end = trop_tokenizer.tokenize([])
-
+        # No teacher forcing during prediction
         while stop is False:
             predictions = transformer([g_tokens[tf.newaxis], np.array(output)[np.newaxis]], training=False)
 
@@ -131,8 +138,12 @@ with open(os.path.join("log", f"{model_name}_{version}_validation_generated.txt"
         # print("Input verse:  ", lines[seq_index][0], file=valid_file)
         print("Input verse:  ", lines[seq_index.numpy()[0]][0], file=valid_file)
         print("Input grammar:", grammar_tokenizer.detokenize(g_tokens.numpy()), file=valid_file)
-        print("Actual trop:  ", [utils.trop_names[x] for x in trop_tokenizer.detokenize(t_tokens.numpy())], file=valid_file)
-        print("Decoded trop: ", [utils.trop_names[x] for x in trop_tokenizer.detokenize(output)], file=valid_file)
+        if output_data == "trop":
+            print("Actual trop:  ", [utils.trop_names[x] for x in trop_tokenizer.detokenize(t_tokens.numpy())], file=valid_file)
+            print("Decoded trop: ", [utils.trop_names[x] for x in trop_tokenizer.detokenize(output)], file=valid_file)
+        elif output_data == "level":
+            print("Actual levels: ", list(trop_tokenizer.detokenize(t_tokens.numpy())), file=valid_file)
+            print("Decoded levels:", list(trop_tokenizer.detokenize(output)), file=valid_file)
         print("Accuracy:     ", accuracy, file=valid_file)
         print("Bigram Acc:   ", bigram_accuracy, file=valid_file)
     print(f"Overall accuracy (test): {np.mean(accuracies)}", file=valid_file)
