@@ -28,6 +28,7 @@ def groupby_looper2(bhsac_df):
 
         sent_word_nodes = []
         sent_gram_nodes = []
+        sent_parent_nodes = []
         sent_trope_nodes = []
         word = ""
 
@@ -37,16 +38,20 @@ def groupby_looper2(bhsac_df):
             if row.otype == "clause":
                 sent_gram.append(row.kind)
                 sent_gram_nodes.append(row.n)
-            elif row.otype == "phrase_atom":
+                sent_parent_nodes.append(row.functional_parent)
+            elif row.otype == "phrase":
                 sent_gram.append(row.typ)
                 sent_gram_nodes.append(row.n)
+                sent_parent_nodes.append(row.functional_parent)
             elif row.otype == "word":
                 sent_gram.append(row.pdp)
                 sent_gram_nodes.append(row.n)
+                sent_parent_nodes.append(row.functional_parent)
             # flags
-            elif row.otype == "sentence_atom":
-                sent_gram.append("sentence_atom")
+            elif row.otype == "sentence":
+                sent_gram.append("sentence")
                 sent_gram_nodes.append(row.n)
+                sent_parent_nodes.append(row.functional_parent)
 
             # Words and trope
             if row.g_word_utf8 is not np.nan:
@@ -106,7 +111,7 @@ def groupby_looper2(bhsac_df):
         sent_trope.append(chr(1475))
         sent_trope_nodes.append(verse.n.iloc[-1])
 
-        yield sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id
+        yield sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_parent_nodes, sent_trope_nodes, verse_id
 
 
 def compile_sets(lines, num_samples=None, use_pasuk=False):
@@ -276,10 +281,10 @@ if __name__ == "__main__":
     looper = groupby_looper2(bhsac_df=bhsac_df)
 
     # TODO-DONE save results
-    with open("data/grammar_v_trop-v2.7.txt", "w", encoding="utf-8") as grammar_v_trop:
-        for sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_trope_nodes, verse_id in looper:
+    with open("data/grammar_v_trop-v2.8.txt", "w", encoding="utf-8") as grammar_v_trop:
+        for sent_word, sent_word_parts, sent_gram, sent_trope, sent_word_nodes, sent_gram_nodes, sent_parent_nodes, sent_trope_nodes, verse_id in looper:
             print(sent_word, sent_word_parts, sent_gram, sent_trope)
-            grammar_v_trop.write("\t".join([str(sent_word), str(sent_word_parts), str(sent_gram), str(sent_trope), str(sent_word_nodes), str(sent_gram_nodes), str(sent_trope_nodes), str(verse_id.values.tolist()[0])]))
+            grammar_v_trop.write("\t".join([str(sent_word), str(sent_word_parts), str(sent_gram), str(sent_trope), str(sent_word_nodes), str(sent_gram_nodes), str(sent_parent_nodes), str(sent_trope_nodes), str(verse_id.values.tolist()[0])]))
             grammar_v_trop.write("\n")
 
     print("Done!")

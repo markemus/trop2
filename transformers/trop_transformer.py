@@ -9,6 +9,7 @@ import parsers
 import utils
 
 
+# TODO test predicting just breaks without level number (, x x x , x , x x)
 # VARS
 batch_size = 64  # Batch size for training.
 # epochs = 100  # Number of epochs to train for.
@@ -27,7 +28,6 @@ ckpt_path = os.path.join("ckpt", model_name, version + ".h5")
 log_path = os.path.join("log", model_name, version)
 os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
 
-# TODO-DONE drop EMES trop sefarim (iyov, mishlei, tehilim)
 path = "../data/bhsac.tsv"
 bhsac_df = pd.read_csv(path, sep="\t")
 # Drop EMES sefarim
@@ -70,13 +70,10 @@ num_decoder_tokens = len(target_characters)
 max_encoder_seq_length = max([len(txt) for txt in input_texts])
 max_decoder_seq_length = max([len(txt) for txt in target_texts])
 # Convert sets from compile_sets() into categorical data tables ready for the LSTM
-# TODO-DECIDE save character dictionaries with model so we can use same tokenization for inference later? They SHOULD be index safe but very fishy
 # encoder_input_data, decoder_input_data, decoder_target_data, input_token_index, target_token_index = parsers.build_lstm_data(input_characters=input_characters, target_characters=target_characters, input_texts=input_texts, target_texts=target_texts)
 # Index safe
 input_arr, target_inputs, target_labels, input_token_index, target_token_index = parsers.build_transformer_data(input_characters=input_characters, target_characters=target_characters, input_texts=input_texts, target_texts=target_texts)
 
-# TODO-DONE build datasets
-# ds = tf.data.Dataset.from_tensor_slices(((input_arr, target_inputs), target_labels)).batch(64)
 idx = np.array(range(len(lines))).reshape(-1, 1)
 ds = tf.data.Dataset.from_tensor_slices(((input_arr, target_inputs), target_labels, idx)).shuffle(buffer_size=20000, reshuffle_each_iteration=False).batch(64)
 train_test_split = int(16000/64)
@@ -148,9 +145,8 @@ with open(os.path.join("log", f"{model_name}_{version}_validation_generated.txt"
         print("Bigram Acc:   ", bigram_accuracy, file=valid_file)
     print(f"Overall accuracy (test): {np.mean(accuracies)}", file=valid_file)
     print(f"Overall bigram accuracy (test): {np.mean(bigram_accuracies)}", file=valid_file)
-transformer.save_weights(ckpt_path)
-# transformer.load_weights(ckpt_path)
 
-# TODO-DONE reverse trop model
-# TODO-DONE save model
+transformer.save_weights(ckpt_path)
+
 print("Done!")
+# TODO GAN- generate realistic trop from grammar. Discriminator gets grammar + trop. Not differentiable?

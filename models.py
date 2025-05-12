@@ -355,7 +355,8 @@ class Transformer(tf.keras.Model):
 
         # Return the final output and the attention weights.
         return logits
-    # TODO predict() and save()
+
+# TODO trop classifier for GAN
 
 
 class CustomSchedule(tf.keras.optimizers.schedules.LearningRateSchedule):
